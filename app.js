@@ -27,17 +27,39 @@ const initializeDBAndServer = async () => {
 //get
 
 initializeDBAndServer()
-app.get('/players/:player_id/', async (require, response) => {
-  const {player_id} = require.params
+const convertDbObjectToResponseObject = dbObject => {
+  return {
+    playerId: dbObject.player_id,
+    playerName: dbObject.player_name,
+    jerseyNumber: dbObject.jersey_number,
+    role: dbObject.role,
+  }
+}
+app.get('/players/', async (require, response) => {
+  const getCricket = `
+    SELECT 
+      *
+    FROM
+      cricket_team
+  `
+  const cricketArray = await db.all(getCricket)
+  const resAll = cricketArray.map(eachitem => {
+    return convertDbObjectToResponseObject(eachitem)
+  })
+  response.send(resAll)
+})
+app.get('/players/:playerId/', async (require, response) => {
+  const {playerId} = require.params
   const getBookQuery = `
         SELECT
             *
             FROM
         cricket_team
-        where player_id = ${player_id}
+        where player_id = ${playerId}
     `
   const cricket = await db.get(getBookQuery)
-  response.send(cricket)
+
+  response.send(convertDbObjectToResponseObject(cricket))
 })
 
 //post
@@ -53,6 +75,7 @@ app.post('/players/', async (require, response) => {
             '${role}')
     `
   const dbresponse = await db.run(addplayerDetails)
+
   response.send('Player Added to Team')
 })
 
@@ -68,8 +91,9 @@ app.put('/players/:playerId/', async (require, response) => {
       role='${role}'
     WHERE player_id=${playerId}
     `
-  await db.run(upadateDetails)
-  response.send('Book Update Successfully')
+  const playerRes = await db.run(upadateDetails)
+  convertDbObjectToResponseObject(playerRes)
+  response.send('Player Details Updated')
 })
 
 app.delete('/players/:playerId', async (require, response) => {
